@@ -1,9 +1,7 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------
-# Script d'installation Pterodactyl - Space Engineers + Torch
+# Script d'installation Pterodactyl - Space Engineers + Torch V3(
 # -----------------------------------------------------------------------------
-apt-get update -y
-apt-get install -y curl unzip wine xvfb winbind
 
 # Définition du répertoire cible
 repertoire_installation="/mnt/server"
@@ -16,22 +14,46 @@ tar -xzvf steamcmd.tar.gz -C steamcmd
 rm steamcmd.tar.gz
 
 echo "Installation des fichiers du serveur Space Engineers..."
-# Attention : Le téléchargement initial peut être long.
+# L'image Pterodactyl installers gère correctement les dépendances 32 bits pour SteamCMD
 ./steamcmd/steamcmd.sh +force_install_dir ${repertoire_installation} +login anonymous +app_update 298740 validate +quit
 
 echo "Téléchargement de Torch..."
-# Récupération de la dernière version stable de Torch depuis leur API officielle
-lien_telechargement_torch=$(curl -s https://build.torchapi.net/job/Torch/job/Torch/job/master/api/json | grep -oP '"url":"\K[^"]+bin/torch-server.zip' | head -n 1)
+# Nouvelle URL officielle .com pointant vers le dernier build stable
+URL_TORCH="https://build.torchapi.com/job/Torch/job/master/lastSuccessfulBuild/artifact/bin/torch-server.zip"
 
-if [ -z "$lien_telechargement_torch" ]; then
-    echo "Erreur critique : Impossible de récupérer l'URL de Torch."
+curl -sSL -o torch-server.zip "$URL_TORCH"
+unzip -o torch-server.zip
+rm torch-server.zip
+
+echo "Création du script de démarrage (startup.sh)..."
+cat << 'EOF' > startup.sh
+#!/bin/bash
+cd /home/container || exit 1
+
+if [ ! -f "Torch.Server.exe" ]; then
+    echo "Erreur : Torch.Server.exe est introuvable."
     exit 1
 fi
 
-curl -sSL -o torch.zip "$lien_telechargement_torch"
-unzip -o torch.zip
-rm torch.zip
+if [ "${AUTO_UPDATE}" == "1" ]; then
+    echo "Mise à jour de Space Engineers initiée..."
+    ./steamcmd/steamcmd.sh +force_install_dir /home/container +login anonymous +app_update 298740 +quit
+fi
 
-# Création du dossier d'instance par défaut pour Torch
+echo "Démarrage de l'affichage virtuel Xvfb..."
+export DISPLAY=:0
+rm -tmp/.X0-lock 2>/dev/null
+Xvfb :0 -screen 0 1024x768x16 &
+pid_serveur_X=$!
+
+echo "Démarrage de Torch sous Wine..."
+wine Torch.Server.exe -nogui
+
+echo "Arrêt du serveur. Nettoyage des processus..."
+kill $pid_serveur_X
+exit 0
+EOF
+
+chmod +x startup.sh
 mkdir -p Instance
 echo "Installation terminée avec succès."
