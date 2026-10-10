@@ -1,11 +1,14 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------
-# Script d'installation Pterodactyl - Space Engineers + Torch V3(
+# Script d'installation Pterodactyl - Space Engineers + Torch V4(log instal)
 # -----------------------------------------------------------------------------
 
-# Définition du répertoire cible
 repertoire_installation="/mnt/server"
 cd ${repertoire_installation} || exit 1
+
+# Redirection de toute la console (sorties standards et erreurs) vers le fichier log
+exec > >(tee -a ${repertoire_installation}/log_instal.txt) 2>&1
+echo "=== Début de l'installation $(date) ==="
 
 echo "Téléchargement de SteamCMD..."
 mkdir -p steamcmd
@@ -56,4 +59,4 @@ EOF
 
 chmod +x startup.sh
 mkdir -p Instance
-echo "Installation terminée avec succès."
+echo "=== Installation terminée avec succès ==="
