@@ -1,14 +1,20 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------
-# Script d'installation Pterodactyl - Space Engineers + Torch V4(log instal)
+# Script d'installation Pterodactyl - Space Engineers + Torch
 # -----------------------------------------------------------------------------
 
 repertoire_installation="/mnt/server"
 cd ${repertoire_installation} || exit 1
 
-# Redirection de toute la console (sorties standards et erreurs) vers le fichier log
+# Redirection vers le log
 exec > >(tee -a ${repertoire_installation}/log_instal.txt) 2>&1
-echo "=== Début de l'installation $(date) ==="
+echo "=== Début de l'installation ==="
+
+echo "Installation des dépendances d'installation..."
+# Activation de l'architecture 32 bits requise par SteamCMD
+dpkg --add-architecture i386
+apt-get update -y
+apt-get install -y curl unzip lib32gcc-s1
 
 echo "Téléchargement de SteamCMD..."
 mkdir -p steamcmd
@@ -17,13 +23,10 @@ tar -xzvf steamcmd.tar.gz -C steamcmd
 rm steamcmd.tar.gz
 
 echo "Installation des fichiers du serveur Space Engineers..."
-# L'image Pterodactyl installers gère correctement les dépendances 32 bits pour SteamCMD
 ./steamcmd/steamcmd.sh +force_install_dir ${repertoire_installation} +login anonymous +app_update 298740 validate +quit
 
 echo "Téléchargement de Torch..."
-# Nouvelle URL officielle .com pointant vers le dernier build stable
 URL_TORCH="https://build.torchapi.com/job/Torch/job/master/lastSuccessfulBuild/artifact/bin/torch-server.zip"
-
 curl -sSL -o torch-server.zip "$URL_TORCH"
 unzip -o torch-server.zip
 rm torch-server.zip
